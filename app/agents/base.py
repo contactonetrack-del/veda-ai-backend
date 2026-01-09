@@ -1,13 +1,16 @@
 """
 Base Agent Class
 All specialized agents inherit from this base class
+Now uses Model Router for multi-model support with fallback
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-from google import genai
+from typing import Dict, Any, Optional, Literal
+from app.services.model_router import model_router
 from app.core.config import get_settings
 
 settings = get_settings()
+
+ModelProvider = Literal["gemini", "groq", "auto"]
 
 
 class BaseAgent(ABC):
@@ -17,28 +20,51 @@ class BaseAgent(ABC):
         self.name = name
         self.description = description
         self.system_prompt = system_prompt
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self.default_provider: ModelProvider = "auto"
     
-    async def generate(self, user_message: str, context: str = "") -> str:
-        """Generate a response using Gemini with agent-specific system prompt"""
+    async def generate(
+        self, 
+        user_message: str, 
+        context: str = "",
+        provider: ModelProvider = "auto",
+        fast: bool = False
+    ) -> str:
+        """
+        Generate a response using model router (multi-provider support)
         
-        full_prompt = f"""{self.system_prompt}
-
-{context}
+        Args:
+            user_message: The user's message
+            context: Additional context from memory
+            provider: Force specific provider or "auto" for smart routing
+            fast: If True, prefer faster models
+        
+        Returns:
+            Generated response text
+        """
+        
+        full_prompt = f"""{context}
 
 User: {user_message}
 
 Provide a helpful, accurate response:"""
         
         try:
-            response = self.client.models.generate_content(
-                model='gemini-2.0-flash-exp',
-                contents=full_prompt
+            result = await model_router.generate(
+                message=full_prompt,
+                system_prompt=self.system_prompt,
+                provider=provider,
+                fast=fast
             )
-            return response.text
+            
+            # Log which model was used
+            if result.get("fallback"):
+                print(f"[{self.name}] Used fallback: {result.get('provider')}")
+            
+            return result.get("response", "I apologize, but I encountered an issue.")
+            
         except Exception as e:
             print(f"[{self.name}] Error: {e}")
-            return f"I apologize, but I encountered an issue. Please try again."
+            return "I apologize, but I encountered an issue. Please try again."
     
     @abstractmethod
     async def process(self, user_message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -47,3 +73,4 @@ Provide a helpful, accurate response:"""
         Must be implemented by each specialized agent
         """
         pass
+

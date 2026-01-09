@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_KEY: str
     
-    # AI
+    # AI Models
     GEMINI_API_KEY: str = ""
+    GROQ_API_KEY: str = ""  # Optional: For LLaMA via Groq
     
     class Config:
         env_file = ".env"
