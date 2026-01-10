@@ -26,7 +26,8 @@ class FactCheckerAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="FactCheckerAgent",
-            description="Verifies factual accuracy of AI responses"
+            description="Verifies factual accuracy of AI responses",
+            system_prompt="You are a fact-checking assistant that verifies claims against evidence."
         )
     
     async def process(self, message: str, context: Dict = None) -> Dict:
