@@ -33,13 +33,18 @@ class VectorMemory:
         """
         doc_id = str(uuid.uuid4())
         
-        # Prepare metadata
+        # Prepare metadata - filter out None values (ChromaDB requirement)
         meta = {
             "user_id": user_id,
             "role": role,
             "timestamp": datetime.utcnow().isoformat(),
-            **(metadata or {})
         }
+        
+        # Merge additional metadata, filtering out None values
+        if metadata:
+            for key, value in metadata.items():
+                if value is not None:
+                    meta[key] = str(value) if not isinstance(value, (str, int, float, bool)) else value
         
         # Add to collection
         self.collection.add(
