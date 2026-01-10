@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
-from app.api import auth, chat
+from app.api import auth, chat, transcribe, vision
 
 settings = get_settings()
 
@@ -22,6 +22,8 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(chat.router, prefix=f"{settings.API_V1_STR}/chats", tags=["chats"])
+app.include_router(transcribe.router, prefix=f"{settings.API_V1_STR}/audio", tags=["audio"])
+app.include_router(vision.router, prefix=f"{settings.API_V1_STR}/vision", tags=["vision"])
 
 @app.get("/")
 def root():
