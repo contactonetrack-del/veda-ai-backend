@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GROQ_API_KEY: str = ""  # Optional: For LLaMA via Groq
     
+    # Web Search APIs (Phase 1: Perplexity-class)
+    BRAVE_API_KEY: str = ""  # Primary: 2,000 free searches/month
+    TAVILY_API_KEY: str = ""  # Fallback: 100 free calls
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

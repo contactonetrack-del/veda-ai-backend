@@ -13,13 +13,21 @@ class RouterAgent(BaseAgent):
         super().__init__(
             name="Router",
             description="Classifies user intent and routes to specialists",
-            system_prompt="""You are an intent classifier for VEDA AI, a wellness assistant.
+            system_prompt="""You are an intent classifier for VEDA AI, a wellness and intelligence assistant.
 
 Your job is to classify user messages into ONE of these categories:
 - "wellness": Nutrition, diet, fitness, exercise, yoga, meditation, Ayurveda, weight management
 - "protection": Health insurance, medical coverage, claims, policies, family health plans (frame as "health protection", not finance)
 - "tool": User explicitly wants a calculation (calories, BMI, premium estimate)
-- "general": Greetings, about VEDA, unclear queries
+- "search": Queries requiring REAL-TIME information, latest news, current research, current events, live data
+- "general": Greetings, about VEDA, unclear queries, casual conversation
+
+IMPORTANT: Use "search" for queries about:
+- Latest/recent news or research
+- Current events or live information
+- "What is happening with..."
+- Questions requiring up-to-date data
+- Topics where information changes frequently
 
 Respond with ONLY the category name, nothing else.
 
@@ -31,7 +39,11 @@ Examples:
 "What's a good workout for back pain?" → wellness
 "Explain claim process" → protection
 "I want to lose 5kg" → wellness
-"Premium for 10 lakh cover?" → tool"""
+"Premium for 10 lakh cover?" → tool
+"What's the latest research on intermittent fasting?" → search
+"Current news about COVID vaccine" → search
+"Tell me about recent health trends" → search
+"What's happening in AI today?" → search"""
         )
     
     async def process(self, user_message: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -44,7 +56,7 @@ Examples:
         intent = classification.strip().lower()
         
         # Validate classification
-        valid_intents = ["wellness", "protection", "tool", "general"]
+        valid_intents = ["wellness", "protection", "tool", "search", "general"]
         if intent not in valid_intents:
             # Default to general if unclear
             intent = "general"
@@ -61,6 +73,7 @@ Examples:
             "wellness": "WellnessAgent",
             "protection": "ProtectionAgent",
             "tool": "ToolAgent",
+            "search": "SearchAgent",
             "general": "GeneralAgent"
         }
         return mapping.get(intent, "GeneralAgent")

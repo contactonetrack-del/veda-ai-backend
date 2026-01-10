@@ -1,6 +1,7 @@
 """
 Orchestrator
 Main orchestration logic that coordinates all agents
+Phase 1: Now includes SearchAgent for real-time web search
 """
 from typing import Dict, Any, List
 from app.agents.router import router_agent
@@ -8,6 +9,7 @@ from app.agents.wellness import wellness_agent
 from app.agents.protection import protection_agent
 from app.agents.general import general_agent
 from app.agents.tools import tool_agent
+from app.agents.search import search_agent
 from app.agents.critic import critic_agent
 from app.services.memory import vector_memory
 from app.services.embeddings import generate_embedding
@@ -24,7 +26,8 @@ class Orchestrator:
             "WellnessAgent": wellness_agent,
             "ProtectionAgent": protection_agent,
             "GeneralAgent": general_agent,
-            "ToolAgent": tool_agent
+            "ToolAgent": tool_agent,
+            "SearchAgent": search_agent
         }
     
     async def process_message(
@@ -105,7 +108,8 @@ class Orchestrator:
             "intent": intent,
             "agent_used": agent_name,
             "reviewed": review.get("approved", True),
-            "context_used": len(memory_context) > 0
+            "context_used": len(memory_context) > 0,
+            "sources": agent_result.get("sources", [])  # Phase 1: Include citations
         }
 
 
