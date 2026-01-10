@@ -1,7 +1,8 @@
 """
 Orchestrator
 Main orchestration logic that coordinates all agents
-Phase 1: Now includes SearchAgent for real-time web search
+Phase 1: SearchAgent for real-time web search
+Phase 2: FactChecker for verification
 """
 from typing import Dict, Any, List
 from app.agents.router import router_agent
@@ -11,6 +12,7 @@ from app.agents.general import general_agent
 from app.agents.tools import tool_agent
 from app.agents.search import search_agent
 from app.agents.critic import critic_agent
+from app.agents.fact_checker import fact_checker
 from app.services.memory import vector_memory
 from app.services.embeddings import generate_embedding
 
@@ -34,7 +36,8 @@ class Orchestrator:
         self, 
         user_message: str, 
         user_id: str,
-        chat_id: str = None
+        chat_id: str = None,
+        verify_facts: bool = True
     ) -> Dict[str, Any]:
         """
         Main entry point for processing user messages
@@ -43,6 +46,7 @@ class Orchestrator:
             user_message: The user's message
             user_id: Unique user identifier for memory isolation
             chat_id: Optional chat ID for logging
+            verify_facts: Whether to run fact-checking (Phase 2)
         
         Returns:
             Dict with final response and metadata
@@ -85,6 +89,22 @@ class Orchestrator:
         review = await critic_agent.process(user_message, critic_context)
         final_response = review.get("final_response", draft_response)
         
+        # Step 5.5: Fact-check if enabled (Phase 2)
+        verification_result = None
+        if verify_facts and intent in ["search", "wellness", "general"]:
+            try:
+                verification_result = await fact_checker.process(
+                    final_response,
+                    context={
+                        "original_query": user_message,
+                        "sources": agent_result.get("sources", [])
+                    }
+                )
+                if verification_result.get("verified"):
+                    final_response = verification_result.get("verified_response", final_response)
+            except Exception as e:
+                print(f"[Orchestrator] Fact-check error: {e}")
+        
         # Step 6: Store messages in vector memory
         await vector_memory.add_message(
             user_id=user_id,
@@ -109,7 +129,9 @@ class Orchestrator:
             "agent_used": agent_name,
             "reviewed": review.get("approved", True),
             "context_used": len(memory_context) > 0,
-            "sources": agent_result.get("sources", [])  # Phase 1: Include citations
+            "sources": agent_result.get("sources", []),  # Phase 1: Include citations
+            "verified": verification_result.get("verified", False) if verification_result else False,
+            "confidence": verification_result.get("confidence", 0.0) if verification_result else 0.0
         }
 
 

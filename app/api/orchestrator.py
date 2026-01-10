@@ -2,6 +2,7 @@
 Orchestrator API Routes
 Multi-agent query processing with citations
 Phase 1: Perplexity-class Intelligence
+Phase 2: Fact-checking verification
 """
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
@@ -17,6 +18,7 @@ class QueryRequest(BaseModel):
     message: str
     context: Optional[Dict] = {}
     user_id: Optional[str] = "guest"
+    verify_facts: Optional[bool] = True  # Phase 2: Enable fact-checking
 
 
 class SourceModel(BaseModel):
@@ -35,6 +37,8 @@ class QueryResponse(BaseModel):
     sources: List[Dict] = []
     reviewed: bool
     context_used: bool
+    verified: bool = False  # Phase 2: Fact-check verification status
+    confidence: float = 0.0  # Phase 2: Confidence score (0-1)
     timestamp: str
 
 
@@ -57,7 +61,8 @@ async def process_query(request: QueryRequest):
         result = await orchestrator.process_message(
             user_message=request.message,
             user_id=request.user_id or "guest",
-            chat_id=None
+            chat_id=None,
+            verify_facts=request.verify_facts
         )
         
         return QueryResponse(
@@ -67,6 +72,8 @@ async def process_query(request: QueryRequest):
             sources=result.get("sources", []),
             reviewed=result.get("reviewed", True),
             context_used=result.get("context_used", False),
+            verified=result.get("verified", False),
+            confidence=result.get("confidence", 0.0),
             timestamp=datetime.now().isoformat()
         )
     
