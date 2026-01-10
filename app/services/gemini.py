@@ -27,7 +27,6 @@ class GeminiService:
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     async def generate_response(self, message: str, history: list = [], language: str = "en"):
-        try:
             # Build the prompt with system instruction
             full_prompt = f"{VEDA_SYSTEM_INSTRUCTION}\n\nUser ({language}): {message}\n\nVEDA AI:"
             
@@ -36,8 +35,5 @@ class GeminiService:
                 contents=full_prompt
             )
             return response.text
-        except Exception as e:
-            print(f"Gemini API Error: {e}")
-            return "I apologize, but I'm having trouble connecting right now. Please try again."
 
 gemini_service = GeminiService()

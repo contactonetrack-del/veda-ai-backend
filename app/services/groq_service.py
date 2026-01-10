@@ -17,9 +17,9 @@ class GroqService:
         api_key = getattr(settings, 'GROQ_API_KEY', None)
         self.client = Groq(api_key=api_key) if api_key else None
         self.available = self.client is not None
-        # Using LLaMA 3 70B for quality, 8B for speed
-        self.default_model = "llama3-70b-8192"
-        self.fast_model = "llama3-8b-8192"
+        # Using LLaMA 3.3 70B for quality, 3.1 8B for speed (2026 models)
+        self.default_model = "llama-3.3-70b-versatile"
+        self.fast_model = "llama-3.1-8b-instant"
     
     async def generate_response(
         self, 

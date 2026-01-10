@@ -16,7 +16,7 @@ async def generate_embedding(text: str) -> list[float]:
     try:
         result = client.models.embed_content(
             model='models/text-embedding-004',
-            content=text
+            contents=text
         )
         return result.embeddings[0].values
     except Exception as e:
