@@ -49,18 +49,13 @@ async def voice_websocket(websocket: WebSocket):
             
             if "bytes" in data:
                 audio_buffer.extend(data["bytes"])
-                
-                # Process when we have ~1 second of audio (16kHz * 2 bytes * 1 sec = 32000)
-                # Reduced from 64000 (2s) for lower latency
-                if len(audio_buffer) >= 32000:
-                    await process_audio_streaming(websocket, audio_buffer, user_id, preferred_language)
-                    audio_buffer.clear()
+                # Buffer until end_stream (for File Uploads like M4A)
                     
             elif "text" in data:
                 command = json.loads(data["text"])
                 
                 if command.get("type") == "end_stream":
-                    if len(audio_buffer) > 8000:
+                    if len(audio_buffer) > 0:
                         await process_audio_streaming(websocket, audio_buffer, user_id, preferred_language)
                     audio_buffer.clear()
                     
@@ -93,15 +88,11 @@ async def process_audio_streaming(websocket: WebSocket, audio_buffer: bytearray,
     tmp_path = None
     
     try:
-        # 1. Save audio to temp file
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        # 1. Save audio to temp file (Direct write, handle container formats like M4A/WebM)
+        with tempfile.NamedTemporaryFile(suffix=".audio", delete=False) as tmp:
             tmp_path = tmp.name
-            with wave.open(tmp_path, 'wb') as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(16000)
-                wf.writeframes(bytes(audio_buffer))
-        
+            tmp.write(audio_buffer)
+            
         # 2. Transcribe with Whisper (auto language detection)
         logger.info("Transcribing audio...")
         result = asr_service.transcribe(tmp_path)
