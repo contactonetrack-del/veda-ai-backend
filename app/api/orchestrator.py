@@ -19,6 +19,8 @@ class QueryRequest(BaseModel):
     context: Optional[Dict] = {}
     user_id: Optional[str] = "guest"
     verify_facts: Optional[bool] = True  # Phase 2: Enable fact-checking
+    mode: Optional[str] = "auto"  # Agent mode (auto, research, analyze, study, etc.)
+    style: Optional[str] = "auto"  # Conversation style (auto, fast, planning)
 
 
 class SourceModel(BaseModel):
@@ -58,11 +60,24 @@ async def process_query(request: QueryRequest):
     - "Best exercises for weight loss" → WellnessAgent
     """
     try:
+        # Phase 5: Map mode to agent name (7 modes)
+        mode_to_agent = {
+            "auto": None,  # Let Router decide
+            "research": "DeepResearchAgent",
+            "analyze": "DataAnalystAgent",
+            "wellness": "WellnessAgent",
+            "search": "SearchAgent",
+            "protection": "ProtectionAgent",
+            "study": "StudyAgent"  # Study Mode for Students
+        }
+        force_agent = mode_to_agent.get(request.mode, None)
+        
         result = await orchestrator.process_message(
             user_message=request.message,
             user_id=request.user_id or "guest",
             chat_id=None,
-            verify_facts=request.verify_facts
+            verify_facts=request.verify_facts,
+            force_agent=force_agent
         )
         
         return QueryResponse(

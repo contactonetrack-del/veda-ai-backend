@@ -19,11 +19,24 @@ Your job is to classify user messages into ONE of these categories:
 - "wellness": Nutrition, diet, fitness, exercise, yoga, meditation, Ayurveda, weight management
 - "protection": Health insurance, medical coverage, claims, policies, family health plans (frame as "health protection", not finance)
 - "tool": User explicitly wants a calculation (calories, BMI, premium estimate)
-- "search": Queries requiring REAL-TIME information, latest news, current research, current events, live data
+- "search": Queries requiring REAL-TIME information (news, updates)
+- "research": Requests for DEEP analysis, reports, investigations, or complex topics requiring synthesis
+- "analysis": Requests requiring math, statistics, data processing, or pattern finding
 - "general": Greetings, about VEDA, unclear queries, casual conversation
 
-IMPORTANT: Use "search" for queries about:
-- Latest/recent news or research
+IMPORTANT: Use "analysis" for:
+- "Analyze this data..."
+- "Find trends in..."
+- "Calculate correlation between..."
+- "Predict my..."
+- Mathematical or statistical questions
+
+IMPORTANT: Use "research" for:
+- "Write a report on..."
+- "Deep dive into..."
+- "Investigate..."
+- "Comprehensive analysis of..."
+- "Research X vs Y"
 - Current events or live information
 - "What is happening with..."
 - Questions requiring up-to-date data
@@ -56,7 +69,7 @@ Examples:
         intent = classification.strip().lower()
         
         # Validate classification
-        valid_intents = ["wellness", "protection", "tool", "search", "general"]
+        valid_intents = ["wellness", "protection", "tool", "search", "general", "research", "analysis"]
         if intent not in valid_intents:
             # Default to general if unclear
             intent = "general"
@@ -74,6 +87,8 @@ Examples:
             "protection": "ProtectionAgent",
             "tool": "ToolAgent",
             "search": "SearchAgent",
+            "research": "DeepResearchAgent",
+            "analysis": "DataAnalystAgent",
             "general": "GeneralAgent"
         }
         return mapping.get(intent, "GeneralAgent")

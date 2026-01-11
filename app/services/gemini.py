@@ -27,8 +27,14 @@ class GeminiService:
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
     async def generate_response(self, message: str, history: list = [], language: str = "en"):
-            # Build the prompt with system instruction
-            full_prompt = f"{VEDA_SYSTEM_INSTRUCTION}\n\nUser ({language}): {message}\n\nVEDA AI:"
+            # Build history string
+            history_text = ""
+            for msg in history[-5:]: # Limit to last 5 for context window
+                role = "User" if msg.get("role") == "user" else "VEDA AI"
+                history_text += f"\n{role}: {msg.get('content')}"
+
+            # Build the prompt with system instruction and history
+            full_prompt = f"{VEDA_SYSTEM_INSTRUCTION}\n\nRecent Conversation:{history_text}\n\nUser ({language}): {message}\n\nVEDA AI:"
             
             response = self.client.models.generate_content(
                 model='gemini-2.0-flash-exp',

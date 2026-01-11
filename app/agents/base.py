@@ -26,6 +26,7 @@ class BaseAgent(ABC):
         self, 
         user_message: str, 
         context: str = "",
+        history: list = [],
         provider: ModelProvider = "auto",
         fast: bool = False
     ) -> str:
@@ -52,6 +53,7 @@ Provide a helpful, accurate response:"""
             result = await model_router.generate(
                 message=full_prompt,
                 system_prompt=self.system_prompt,
+                history=history,
                 provider=provider,
                 fast=fast
             )

@@ -5,6 +5,7 @@ Phase 1: SearchAgent for real-time web search
 Phase 2: FactChecker for verification
 """
 from typing import Dict, Any, List
+import asyncio
 from app.agents.router import router_agent
 from app.agents.wellness import wellness_agent
 from app.agents.protection import protection_agent
@@ -13,7 +14,12 @@ from app.agents.tools import tool_agent
 from app.agents.search import search_agent
 from app.agents.critic import critic_agent
 from app.agents.fact_checker import fact_checker
+from app.agents.deep_research import deep_research_agent
+from app.agents.data_analyst import data_analyst_agent
+from app.agents.cross_verifier import cross_verifier_agent
+from app.agents.study import study_agent  # Phase 5: Study Mode
 from app.services.memory import vector_memory
+from app.services.history import history_service
 from app.services.embeddings import generate_embedding
 
 
@@ -29,7 +35,10 @@ class Orchestrator:
             "ProtectionAgent": protection_agent,
             "GeneralAgent": general_agent,
             "ToolAgent": tool_agent,
-            "SearchAgent": search_agent
+            "SearchAgent": search_agent,
+            "DeepResearchAgent": deep_research_agent,
+            "DataAnalystAgent": data_analyst_agent,
+            "StudyAgent": study_agent  # Phase 5: Study Mode
         }
     
     async def process_message(
@@ -37,7 +46,8 @@ class Orchestrator:
         user_message: str, 
         user_id: str,
         chat_id: str = None,
-        verify_facts: bool = True
+        verify_facts: bool = True,
+        force_agent: str = None  # Phase 5: Force specific agent (bypasses Router)
     ) -> Dict[str, Any]:
         """
         Main entry point for processing user messages
@@ -47,6 +57,7 @@ class Orchestrator:
             user_id: Unique user identifier for memory isolation
             chat_id: Optional chat ID for logging
             verify_facts: Whether to run fact-checking (Phase 2)
+            force_agent: Force a specific agent (bypasses Router) (Phase 5)
         
         Returns:
             Dict with final response and metadata
@@ -62,16 +73,34 @@ class Orchestrator:
             top_k=3
         )
         
+        # Step 2.5: Retrieve short-term history
+        short_term_history = history_service.get_recent_messages(user_id)
+        
+        # Save User Message to History
+        history_service.add_message(user_id, "user", user_message)
+        
         # Step 3: Route to appropriate agent
-        routing = await router_agent.process(user_message)
-        intent = routing.get("intent", "general")
-        agent_name = routing.get("route_to", "GeneralAgent")
+        # Phase 5: If force_agent is specified, use it directly
+        if force_agent and force_agent in self.agents:
+            agent_name = force_agent
+            intent = "research" if force_agent == "DeepResearchAgent" else "analysis"
+        else:
+            # OPTIMIZATION: Fast Path for greetings/short messages
+            greetings = ["hi", "hello", "hey", "namaste", "pranam", "greetings", "good morning", "good evening"]
+            if user_message.strip().lower() in greetings:
+                intent = "general"
+                agent_name = "GeneralAgent"
+            else:
+                routing = await router_agent.process(user_message)
+                intent = routing.get("intent", "general")
+                agent_name = routing.get("route_to", "GeneralAgent")
         
         # Step 4: Get specialist agent and process
         agent = self.agents.get(agent_name, general_agent)
         
         context = {
             "memory": memory_context,
+            "history": short_term_history,
             "user_id": user_id,
             "chat_id": chat_id
         }
@@ -86,12 +115,30 @@ class Orchestrator:
             "tool_success": agent_result.get("success", True)
         }
         
-        review = await critic_agent.process(user_message, critic_context)
+        review = {}
+        # OPTIMIZATION: Skip Critic for 'general' and 'tool' intents (low risk)
+        if intent not in ["general", "tool"]:
+            review = await critic_agent.process(user_message, critic_context)
+        
         final_response = review.get("final_response", draft_response)
         
+        # Step 5.2: Cross-Verification (The "Judge") for high-stakes topics
+        if intent in ["wellness", "protection", "research"]:
+            cross_check = await cross_verifier_agent.process(
+                final_response,
+                context={
+                    "original_query": user_message,
+                    "provider_used": agent_result.get("provider", "unknown")
+                }
+            )
+            if not cross_check.get("verified", True):
+                print(f"[Orchestrator] Cross-Verifier intervened.")
+                final_response = cross_check.get("response", final_response)
+        
         # Step 5.5: Fact-check if enabled (Phase 2)
+        # OPTIMIZATION: Skip Fact-Check for 'general' intent
         verification_result = None
-        if verify_facts and intent in ["search", "wellness", "general"]:
+        if verify_facts and intent in ["search", "wellness"]:
             try:
                 verification_result = await fact_checker.process(
                     final_response,
@@ -105,23 +152,19 @@ class Orchestrator:
             except Exception as e:
                 print(f"[Orchestrator] Fact-check error: {e}")
         
-        # Step 6: Store messages in vector memory
-        await vector_memory.add_message(
-            user_id=user_id,
-            message=user_message,
-            role="user",
-            embedding=user_embedding,
-            metadata={"chat_id": chat_id, "intent": intent}
-        )
+        # Save AI Response to History
+        history_service.add_message(user_id, "assistant", final_response)
         
-        ai_embedding = await generate_embedding(final_response)
-        await vector_memory.add_message(
+        # Background: Store in Vector Memory (Fire and forget)
+        asyncio.create_task(self._save_conversation_background(
             user_id=user_id,
-            message=final_response,
-            role="assistant",
-            embedding=ai_embedding,
-            metadata={"chat_id": chat_id, "agent": agent_name}
-        )
+            user_message=user_message,
+            user_embedding=user_embedding,
+            final_response=final_response,
+            agent_name=agent_name,
+            intent=intent,
+            chat_id=chat_id
+        ))
         
         return {
             "response": final_response,
@@ -133,6 +176,44 @@ class Orchestrator:
             "verified": verification_result.get("verified", False) if verification_result else False,
             "confidence": verification_result.get("confidence", 0.0) if verification_result else 0.0
         }
+
+    async def _save_conversation_background(
+        self, 
+        user_id: str, 
+        user_message: str, 
+        user_embedding: List[float], 
+        final_response: str, 
+        agent_name: str, 
+        intent: str, 
+        chat_id: str
+    ):
+        """
+        Background task to save conversation to vector memory.
+        This runs after the response is sent to the user to reduce latency.
+        """
+        try:
+            # 1. Store User Message
+            await vector_memory.add_message(
+                user_id=user_id,
+                message=user_message,
+                role="user",
+                embedding=user_embedding,
+                metadata={"chat_id": chat_id, "intent": intent}
+            )
+            
+            # 2. Generate Assistant Embedding
+            ai_embedding = await generate_embedding(final_response)
+            
+            # 3. Store Assistant Message
+            await vector_memory.add_message(
+                user_id=user_id,
+                message=final_response,
+                role="assistant",
+                embedding=ai_embedding,
+                metadata={"chat_id": chat_id, "agent": agent_name}
+            )
+        except Exception as e:
+            print(f"[Orchestrator] Background save error: {e}")
 
 
 # Singleton instance

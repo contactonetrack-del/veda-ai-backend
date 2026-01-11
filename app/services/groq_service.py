@@ -25,18 +25,11 @@ class GroqService:
         self, 
         message: str, 
         system_prompt: str = "",
+        history: list = [],
         fast: bool = False
     ) -> str:
         """
         Generate response using Groq LLaMA
-        
-        Args:
-            message: User message
-            system_prompt: Optional system prompt
-            fast: If True, use smaller faster model
-        
-        Returns:
-            Generated response text
         """
         if not self.available:
             raise Exception("Groq API key not configured")
@@ -46,6 +39,14 @@ class GroqService:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
+            
+        # Append history
+        for msg in history:
+            role = "user" if msg.get("role") == "user" else "assistant"
+            content = msg.get("content", "")
+            if content:
+                messages.append({"role": role, "content": content})
+                
         messages.append({"role": "user", "content": message})
         
         try:

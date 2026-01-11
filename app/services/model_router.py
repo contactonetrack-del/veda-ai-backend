@@ -37,6 +37,7 @@ class ModelRouter:
         self,
         message: str,
         system_prompt: str = "",
+        history: list = [],
         provider: ModelProvider = "auto",
         fast: bool = False
     ) -> dict:
@@ -67,6 +68,7 @@ class ModelRouter:
                 response = await groq_service.generate_response(
                     message, 
                     system_prompt, 
+                    history=history,
                     fast=fast
                 )
                 return {
@@ -78,7 +80,7 @@ class ModelRouter:
             else:
                 # Default to Gemini
                 full_prompt = f"{system_prompt}\n\n{message}" if system_prompt else message
-                response = await gemini_service.generate_response(full_prompt)
+                response = await gemini_service.generate_response(full_prompt, history=history)
                 return {
                     "response": response,
                     "provider": "gemini",
@@ -94,7 +96,7 @@ class ModelRouter:
             
             try:
                 if fallback_provider == "groq" and groq_service.available:
-                    response = await groq_service.generate_response(message, system_prompt)
+                    response = await groq_service.generate_response(message, system_prompt, history=history)
                     return {
                         "response": response,
                         "provider": "groq",
@@ -103,7 +105,7 @@ class ModelRouter:
                     }
                 else:
                     full_prompt = f"{system_prompt}\n\n{message}" if system_prompt else message
-                    response = await gemini_service.generate_response(full_prompt)
+                    response = await gemini_service.generate_response(full_prompt, history=history)
                     return {
                         "response": response,
                         "provider": "gemini",
