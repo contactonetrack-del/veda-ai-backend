@@ -39,8 +39,8 @@ class OllamaCloudService:
         
         # Model configuration (Next-Gen Cloud Models)
         self.models = {
-            "reasoning": "deepseek-v3.1:671b",    # Massive reasoning model
-            "vision": "qwen3-vl:235b-instruct",   # SOTA Vision
+            "reasoning": "deepseek-v3.1:671b",    # Massive 671B reasoning model
+            "vision": "gemini-3-flash-preview",   # Next-Gen Vision
             "fast": "gpt-oss:20b",                # Low latency
             "coding": "qwen3-coder:480b",         # Specialized coding giant
             "general": "gpt-oss:120b",            # Balanced powerhouse
