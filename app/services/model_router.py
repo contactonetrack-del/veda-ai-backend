@@ -7,11 +7,12 @@ from typing import Optional, Literal
 from app.services.gemini import gemini_service
 from app.services.groq_service import groq_service
 from app.services.openai_service import openai_service
+from app.services.ollama_service import ollama_service
 from app.core.config import get_settings
 
 settings = get_settings()
 
-ModelProvider = Literal["gemini", "groq", "openai", "auto"]
+ModelProvider = Literal["gemini", "groq", "openai", "ollama", "auto"]
 
 
 class ModelRouter:
@@ -21,10 +22,11 @@ class ModelRouter:
         self.providers = {
             "gemini": gemini_service,
             "groq": groq_service,
-            "openai": openai_service
+            "openai": openai_service,
+            "ollama": ollama_service
         }
         # Priority order for fallback
-        self.priority = ["openai", "gemini", "groq"]
+        self.priority = ["ollama", "openai", "groq", "gemini"]
     
     def get_available_models(self) -> list:
         """Return list of available model providers"""
@@ -33,6 +35,8 @@ class ModelRouter:
             available.append("groq")
         if openai_service.api_key:
             available.append("openai")
+        if ollama_service.is_available:
+            available.append("ollama")
         return available
     
     async def generate(
@@ -57,7 +61,10 @@ class ModelRouter:
             check_msg = message.lower()
             is_complex = any(keyword in check_msg for keyword in ["diet", "plan", "chart", "report", "analyze", "medical", "symptom"])
             
-            if is_complex and openai_service.api_key:
+            # Prioritize DeepSeek R1 (Ollama Cloud) for complex/reasoning tasks
+            if is_complex and ollama_service.is_available:
+                 provider = "ollama"
+            elif is_complex and openai_service.api_key:
                 provider = "openai"
             elif fast and groq_service.available:
                 provider = "groq"
@@ -92,6 +99,24 @@ class ModelRouter:
                     "response": response,
                     "provider": "groq",
                     "model": groq_service.fast_model if fast else groq_service.default_model,
+                    "fallback": False
+                }
+                
+            elif provider == "ollama" and ollama_service.is_available:
+                # Use Ollama (Cloud)
+                model_type = "reasoning" if is_complex else ("fast" if fast else "general")
+                # Force reasoning for complex tasks
+                
+                result = await ollama_service.invoke(
+                    prompt=message,
+                    system_prompt=system_prompt,
+                    model_type=model_type,
+                    reasoning_mode=(model_type == "reasoning")
+                )
+                return {
+                    "response": result.get("response", ""),
+                    "provider": "ollama",
+                    "model": result.get("model_used", "ollama-cloud"),
                     "fallback": False
                 }
             else:

@@ -1,45 +1,49 @@
 """
-Local LLM Service - Phase 1
-Manages Ollama models for local AI inference
-Zero-cost alternative to cloud APIs (Groq, OpenAI)
+Ollama Cloud Service - Phase 2 (Cloud Native)
+Manages connection to Ollama Cloud API (ollama.com)
+Provides access to DeepSeek R1 and other open models via cloud.
 """
 import asyncio
 import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from app.core.config import get_settings
 
-# Check if ollama is available
+settings = get_settings()
+
+
 try:
     import ollama
-    OLLAMA_AVAILABLE = True
+    OLLAMA_LIB_AVAILABLE = True
 except ImportError:
-    OLLAMA_AVAILABLE = False
-    logging.warning("Ollama not installed. Run: pip install ollama")
+    OLLAMA_LIB_AVAILABLE = False
+    logging.warning("Ollama library not installed. Run: pip install ollama")
 
-from app.services.cloud_ai import cloud_ai_service
+# Note: removing Cloud AI fallback import to avoid circular dependency loop if this BECOMES a primary cloud service.
+# If this fails, the Router should handle fallback to OpenAI/Gemini.
 
 
-class LocalLLMService:
+class OllamaCloudService:
     """
-    Advanced local LLM service with model management
+    Ollama Cloud Service
+    Connects to Ollama Cloud API for reasoning and open models.
     
-    Models (all FREE via Ollama):
-    - reasoning: DeepSeek-R1 7B (math, logic, complex tasks)
-    - vision: Llama 3.2 Vision (image analysis)
-    - fast: Phi-3.5 Mini (quick responses)
-    - coding: Qwen2.5 (code tasks)
+    Models (Cloud):
+    - reasoning: DeepSeek-R1 (Best-in-class reasoning)
+    - vision: Llama 3.2 Vision
+    - fast: Phi-4 / Llama 3
     """
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # Model configuration (can be updated based on installed models)
+        # Model configuration (Next-Gen Cloud Models)
         self.models = {
-            "reasoning": "deepseek-r1:7b",           # Best for complex tasks
-            "vision": "llama3.2-vision:11b",         # Image analysis
-            "fast": "phi3.5:latest",                 # Quick responses
-            "coding": "qwen2.5:7b",                  # Code tasks
-            "general": "llama3.2:latest",            # General purpose
+            "reasoning": "deepseek-v3.1:671b",    # Massive reasoning model
+            "vision": "qwen3-vl:235b-instruct",   # SOTA Vision
+            "fast": "gpt-oss:20b",                # Low latency
+            "coding": "qwen3-coder:480b",         # Specialized coding giant
+            "general": "gpt-oss:120b",            # Balanced powerhouse
         }
         
         # Fallback models if primary not available
@@ -50,8 +54,20 @@ class LocalLLMService:
             "coding": "deepseek-r1:7b",
         }
         
-        self.is_available = OLLAMA_AVAILABLE
+        self.is_available = OLLAMA_LIB_AVAILABLE and bool(settings.OLLAMA_API_KEY)
         self._model_status = {}
+        self.client = None
+
+        if self.is_available:
+            try:
+                self.client = ollama.Client(
+                    host="https://ollama.com",
+                    headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'}
+                )
+                self.logger.info("✅ Ollama Cloud Service Initialized")
+            except Exception as e:
+                self.logger.error(f"Failed to init Ollama Cloud Client: {e}")
+                self.is_available = False
     
     async def check_model_availability(self, model_type: str = "reasoning") -> bool:
         """Check if a model is available locally"""
@@ -61,7 +77,7 @@ class LocalLLMService:
         try:
             model_name = self.models.get(model_type, self.models["reasoning"])
             # Try to get model info
-            models_list = ollama.list()
+            models_list = self.client.list()
             available_models = [m.get('name', '') for m in models_list.get('models', [])]
             return any(model_name in m for m in available_models)
         except Exception as e:
@@ -93,14 +109,8 @@ class LocalLLMService:
         """
         
         if not self.is_available:
-            self.logger.warning("Ollama not available, falling back to Cloud AI")
-            return await cloud_ai_service.invoke(
-                prompt=prompt,
-                system_prompt=system_prompt,
-                model_preference="fast" if model_type == "fast" else "utility",
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            self.logger.warning("Ollama Cloud not configured (missing key or lib)")
+            return {"error": "Ollama Cloud Unavailable"}
         
         try:
             model_name = self.models.get(model_type, self.models["reasoning"])
@@ -132,7 +142,7 @@ class LocalLLMService:
             self.logger.info(f"Invoking {model_name} with {len(prompt)} chars")
             
             # Call Ollama
-            response = ollama.chat(
+            response = self.client.chat(
                 model=model_name,
                 messages=messages,
                 options=options,
@@ -149,20 +159,15 @@ class LocalLLMService:
                 "completion_tokens": len(answer.split()),
                 "timestamp": datetime.now().isoformat(),
                 "reasoning_used": reasoning_mode,
-                "local": True,
-                "cost": 0.0  # Zero cost!
+                "local": False,
+                "cloud_provider": "ollama",
+                "cost": 0.0
             }
             
         except Exception as e:
-            self.logger.error(f"Local LLM invocation failed: {str(e)}")
-            self.logger.info("Falling back to Cloud AI...")
-            return await cloud_ai_service.invoke(
-                prompt=prompt,
-                system_prompt=system_prompt,
-                model_preference="fast" if model_type == "fast" else "utility",
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            self.logger.error(f"Ollama Cloud invocation failed: {str(e)}")
+            # Raise exception to let Router handle fallback to next provider (e.g. OpenAI)
+            raise e
     
     async def stream_response(
         self,
@@ -185,7 +190,7 @@ class LocalLLMService:
         messages.append({"role": "user", "content": prompt})
         
         try:
-            response = ollama.chat(
+            response = self.client.chat(
                 model=model_name,
                 messages=messages,
                 stream=True
@@ -267,10 +272,10 @@ class LocalLLMService:
             "ollama_available": self.is_available,
             "models_configured": self.models,
             "fallback_models": self.fallback_models,
-            "cloud_fallback": cloud_ai_service.get_status(),
-            "note": "Local AI uses Ollama. Cloud Fallback active for 24/7 availability."
+            "cloud_fallback_ready": True,
+            "note": "Using Ollama Cloud API"
         }
 
 
 # Singleton instance
-local_llm_service = LocalLLMService()
+ollama_service = OllamaCloudService()

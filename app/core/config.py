@@ -18,9 +18,13 @@ class Settings(BaseSettings):
     BRAVE_API_KEY: str = ""  # Primary: 2,000 free searches/month
     TAVILY_API_KEY: str = ""  # Fallback: 100 free calls
     
+    # Ollama Cloud
+    OLLAMA_API_KEY: str = ""
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 @lru_cache()
 def get_settings():
