@@ -1,29 +1,31 @@
 """
-Advanced Reasoning Engine - Phase 2
+Advanced Reasoning Engine - Phase 3 (Cloud Native)
 Chain-of-Thought, Tree-of-Thought, Self-Consistency patterns
-Improves accuracy 2-5x on complex problems
+Leverages DeepSeek V3.1 (671B) and Gemini 3 via Ollama Cloud.
 """
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from app.services.local_llm import local_llm_service
+from app.services.ollama_service import ollama_service
 
 
 class AdvancedReasoningEngine:
     """
     Advanced reasoning patterns for complex problem solving
     
-    Techniques (all zero-cost, uses local LLM):
+    Techniques:
     - Chain-of-Thought (CoT): 2-3x accuracy improvement
     - Tree-of-Thought (ToT): 4-5x on complex problems
     - Self-Consistency: 40% error reduction
     - Decomposed Reasoning: Multi-step problem solving
+    
+    Backend: Ollama Cloud (DeepSeek V3.1 671B)
     """
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.llm = local_llm_service
+        self.llm = ollama_service
     
     async def chain_of_thought(
         self,

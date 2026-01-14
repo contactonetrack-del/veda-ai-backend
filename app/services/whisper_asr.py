@@ -1,6 +1,11 @@
 import os
 import logging
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel
+    HAS_WHISPER = True
+except ImportError:
+    HAS_WHISPER = False
+    WhisperModel = None
 from typing import Tuple, List, Dict, Any
 
 # Model size from env (tiny=fastest, base=balanced, small=better accuracy)

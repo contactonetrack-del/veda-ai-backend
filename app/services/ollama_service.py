@@ -91,7 +91,8 @@ class OllamaCloudService:
         temperature: float = 0.7,
         max_tokens: int = 2000,
         system_prompt: Optional[str] = None,
-        reasoning_mode: bool = False
+        reasoning_mode: bool = False,
+        images: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Invoke a local LLM with advanced options
@@ -103,6 +104,7 @@ class OllamaCloudService:
             max_tokens: Maximum response length
             system_prompt: System instructions for the model
             reasoning_mode: Enable extended reasoning (DeepSeek-R1 only)
+            images: List of base64 encoded images
             
         Returns:
             dict with response, model_used, tokens, etc.
@@ -124,10 +126,15 @@ class OllamaCloudService:
                     "content": system_prompt
                 })
             
-            messages.append({
+            user_msg = {
                 "role": "user",
                 "content": prompt
-            })
+            }
+            
+            if images:
+                user_msg["images"] = images
+                
+            messages.append(user_msg)
             
             # Model options
             options = {

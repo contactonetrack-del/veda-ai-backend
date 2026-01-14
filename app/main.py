@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
-from app.api import auth, chat, transcribe, vision, orchestrator, local_llm, reasoning, experts, browser, knowledge, voice
+from app.api import auth, chat, transcribe, vision, orchestrator, local_llm, reasoning, experts, browser, knowledge, voice, memory
 
 settings = get_settings()
 
@@ -35,6 +35,7 @@ app.include_router(browser.router, prefix=f"{settings.API_V1_STR}/browser", tags
 
 # Phase 4: Knowledge Base & RAG
 app.include_router(knowledge.router, prefix=f"{settings.API_V1_STR}/knowledge", tags=["knowledge"])
+app.include_router(memory.router, prefix=f"{settings.API_V1_STR}/memory", tags=["memory"])
 
 # Phase 7: Voice Integration
 app.include_router(voice.router)

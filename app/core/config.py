@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     
     # AI Models
     GEMINI_API_KEY: str = ""
-    GROQ_API_KEY: str = ""  # Optional: For LLaMA via Groq
+    GROQ_API_KEY: str = ""
+    VITE_GROQ_API_KEY: str = ""  # For frontend usage via backend proxy
     
     # Web Search APIs (Phase 1: Perplexity-class)
     BRAVE_API_KEY: str = ""  # Primary: 2,000 free searches/month
@@ -20,6 +21,18 @@ class Settings(BaseSettings):
     
     # Ollama Cloud
     OLLAMA_API_KEY: str = ""
+    
+    # OpenRouter
+    OPENROUTER_API_KEY: str = ""
+    
+    # xAI
+    XAI_API_KEY: str = ""
+
+    # Jira MCP Integration
+    JIRA_HOST: str = "https://onetrack.atlassian.net"
+    JIRA_USER_EMAIL: str = ""
+    JIRA_API_TOKEN: str = ""
+    JIRA_PROJECT_KEY: str = "DEV"
     
     class Config:
         env_file = ".env"

@@ -86,11 +86,43 @@ class Orchestrator:
             intent = "research" if force_agent == "DeepResearchAgent" else "analysis"
         else:
             # OPTIMIZATION: Fast Path for greetings/short messages
+            msg_lower = user_message.strip().lower()
             greetings = ["hi", "hello", "hey", "namaste", "pranam", "greetings", "good morning", "good evening"]
-            if user_message.strip().lower() in greetings:
+            
+            # Fast Path 1: Greetings
+            if msg_lower in greetings:
                 intent = "general"
                 agent_name = "GeneralAgent"
+            
+            # Fast Path 2: Obvious Tool/Calculations
+            elif any(x in msg_lower for x in ["calculate", "bmi", "premium", "cost", "price", "sum", "multiply"]):
+                # Simple keyword check for tools, but let router confirm complex ones if needed
+                # For now, let's keep it handled by router mostly, or force if very obvious
+                # Putting price/cost here might overlap with search, so be careful.
+                # "calculate bmi" is definitely tool
+                 if "bmi" in msg_lower or "calculate" in msg_lower:
+                    intent = "tool"
+                    agent_name = "ToolAgent"
+                 else:
+                     # Fallthrough
+                     intent = None
+
+            # Fast Path 3: Obvious Search/News
+            # "price of", "cost of" usually implies search unless it's "premium estimate" (handled by tool)
+            elif any(x in msg_lower for x in ["latest", "news", "current", "today", "weather", "who is", "what is", "price of", "cost of", "vs", "versus"]):
+                 # Exclude "what is your name" type questions
+                 if "your" not in msg_lower and "you" not in msg_lower:
+                    print(f"[Orchestrator] Fast-tracking to SearchAgent: {msg_lower[:30]}...")
+                    intent = "search"
+                    agent_name = "SearchAgent" 
+                 else:
+                     intent = None
+            
             else:
+                intent = None
+
+            # Fallback to LLM Router if no fast path matched
+            if not intent:
                 routing = await router_agent.process(user_message)
                 intent = routing.get("intent", "general")
                 agent_name = routing.get("route_to", "GeneralAgent")

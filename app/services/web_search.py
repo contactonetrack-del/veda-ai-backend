@@ -151,7 +151,7 @@ class WebSearchService:
                         "Accept": "application/json",
                         "X-Subscription-Token": self.brave_key
                     },
-                    params={"q": query, "count": min(count, 10)}
+                    params={"q": query, "count": min(count, 20)}
                 )
                 
                 if response.status_code == 200:

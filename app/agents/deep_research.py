@@ -41,14 +41,14 @@ Your reports are "Harvard Business Review" quality: dense with insight, clear in
         gathered_info = []
         sources = []
         
-        for step in plan[:4]: # Expanded to 4 steps for deeper analysis
+        for step in plan[:8]: # Scaled to 8 steps for maximum coverage
             query = step.get('query')
             if not query: continue
             
-            # Search
-            search_result = await web_search.smart_search(query)
+            # Search (Requesting 20 results per query -> 8 * 20 = 160 sources max)
+            search_result = await web_search.smart_search(query, count=20)
             if search_result.get('results'):
-                sources.extend(search_result['results'][:2])
+                sources.extend(search_result['results'])
                 
                 # Extract insights
                 insights = await self._extract_insights(query, search_result['results'])
@@ -62,43 +62,47 @@ Your reports are "Harvard Business Review" quality: dense with insight, clear in
             "success": True,
             "agent": "DeepResearchAgent",
             "sources": self._format_sources_unique(sources),
-            "intent": "deep_research"
+            "intent": "deep_research",
+            "source_count": len(sources)
         }
 
     async def _create_plan(self, query: str) -> List[Dict]:
         """Generate search queries and focus areas"""
-        prompt = f"""Create a rigorous research plan for: "{query}"
+        prompt = f"""Create a rigorous, multi-dimensional research plan for: "{query}"
 
-        Identify 4 distinct critical angles (e.g., Scientific Mechanism, Market Data, Legal/Safety, Future Outlook).
+        Identify 8 distinct critical angles (e.g., Mechanism, Statistics, Market Analysis, Legal/Safety, Historical Context, Future Predictions, Expert Opinions, Case Studies).
         
-        Return exactly 4 search steps in this format (ONE PER LINE):
+        Return exactly 8 search steps in this format (ONE PER LINE):
         1. QUERY: <precise_search_query> | FOCUS: <specific_data_to_extract>
         2. QUERY: <precise_search_query> | FOCUS: <specific_data_to_extract>
-        3. QUERY: <precise_search_query> | FOCUS: <specific_data_to_extract>
-        4. QUERY: <precise_search_query> | FOCUS: <specific_data_to_extract>"""
+        ...
+        8. QUERY: <precise_search_query> | FOCUS: <specific_data_to_extract>"""
         
         response = await groq_service.generate_response(prompt, system_prompt="You are a strategic researcher.")
         
-        # Parse logic (simplified for MVP)
+        # Parse logic
         steps = []
         for line in response.split('\n'):
             if "QUERY:" in line and "FOCUS:" in line:
-                parts = line.split('|')
-                q = parts[0].split('QUERY:')[1].strip()
-                f = parts[1].split('FOCUS:')[1].strip()
-                steps.append({"query": q, "focus": f})
+                try:
+                    parts = line.split('|')
+                    q = parts[0].split('QUERY:')[1].strip()
+                    f = parts[1].split('FOCUS:')[1].strip()
+                    steps.append({"query": q, "focus": f})
+                except: continue
         return steps
 
     async def _extract_insights(self, query: str, results: List[Dict]) -> str:
         """Summarize search results for a specific step"""
-        context = "\n".join([f"- {r['title']}: {r['description']}" for r in results])
+        # Limit context to avoid token overflow (approx 15 results detailed)
+        context = "\n".join([f"- {r['title']}: {r.get('description', '')[:300]}" for r in results[:15]])
         prompt = f"""Analyze these search results for "{query}".
         Context:
         {context}
         
         Goal: Extract high-value facts, statistics, and scientific consensus.
-        Ignore marketing fluff. Focus on hard data and contradictions.
-        Write a dense paragraph."""
+        Ignore marketing fluff. Focus on hard data, numbers, and checking for contradictions.
+        Write a dense, fact-filled summary paragraph."""
         return await groq_service.generate_response(prompt, fast=True)
 
     async def _generate_report(self, query: str, info: List[str]) -> str:

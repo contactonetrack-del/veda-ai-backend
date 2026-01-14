@@ -11,3 +11,13 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OLLAMA_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: VITE_GROQ_API_KEY
+        sync: false

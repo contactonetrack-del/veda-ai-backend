@@ -6,7 +6,7 @@ Zero-cost implementation using local models
 import logging
 from typing import Dict, Any, Optional, List
 from app.services.vector_db import vector_db
-from app.services.local_llm import local_llm_service
+from app.services.ollama_service import ollama_service as local_llm_service
 
 
 class RAGService:

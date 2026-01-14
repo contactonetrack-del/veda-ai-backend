@@ -6,7 +6,7 @@ Uses local LLM for intent detection → zero cost
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from app.services.local_llm import local_llm_service
+from app.services.ollama_service import ollama_service as local_llm_service
 from app.services.reasoning_engine import reasoning_engine
 from app.agents.domain_experts import DOMAIN_EXPERTS, get_expert_response
 

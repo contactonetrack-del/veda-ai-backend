@@ -3,7 +3,7 @@ Domain Expert Agents - Phase 3 Preview
 12 specialized agents based on market demand (all zero-cost)
 """
 from typing import Dict, Any, Optional
-from app.services.local_llm import local_llm_service
+from app.services.ollama_service import ollama_service as local_llm_service
 
 
 # =============================================================================

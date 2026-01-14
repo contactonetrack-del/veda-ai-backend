@@ -4,11 +4,19 @@ Supports 10 Indian languages using Facebook MMS models
 """
 import os
 import logging
-import torch
-import soundfile as sf
 import asyncio
 from typing import Optional, Dict, Generator
-from transformers import VitsModel, AutoTokenizer
+try:
+    import torch
+    import soundfile as sf
+    from transformers import VitsModel, AutoTokenizer
+    HAS_TTS = True
+except ImportError:
+    HAS_TTS = False
+    torch = None
+    sf = None
+    VitsModel = None
+    AutoTokenizer = None
 
 # Language to MMS model mapping
 # Note: Some languages need script-specific variants

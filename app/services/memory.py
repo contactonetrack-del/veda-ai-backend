@@ -56,6 +56,57 @@ class VectorMemory:
         
         return doc_id
     
+    async def get_memories(self, user_id: str, limit: int = 50) -> List[Dict]:
+        """
+        Get recent memories for a user
+        """
+        try:
+            results = self.collection.get(
+                where={"user_id": user_id},
+                limit=limit,
+                include=["documents", "metadatas", "embeddings"]
+            )
+            
+            memories = []
+            if results['ids']:
+                for i, doc_id in enumerate(results['ids']):
+                    memories.append({
+                        "id": doc_id,
+                        "text": results['documents'][i],
+                        "metadata": results['metadatas'][i],
+                        "created_at": results['metadatas'][i].get('timestamp')
+                    })
+            return sorted(memories, key=lambda x: x['created_at'], reverse=True)
+            
+        except Exception as e:
+            print(f"Error fetching memories: {e}")
+            return []
+
+    async def delete_memory(self, user_id: str, memory_id: str) -> bool:
+        """
+        Delete a specific memory
+        """
+        try:
+            # Verify ownership
+            existing = self.collection.get(ids=[memory_id], where={"user_id": user_id})
+            if not existing['ids']:
+                return False
+                
+            self.collection.delete(ids=[memory_id])
+            return True
+        except Exception as e:
+            print(f"Error deleting memory: {e}")
+            return False
+
+    async def clear_history(self, user_id: str) -> bool:
+        """Clear all memories for a user"""
+        try:
+            self.collection.delete(where={"user_id": user_id})
+            return True
+        except Exception as e:
+            print(f"Error clearing history: {e}")
+            return False
+
     async def search_context(
         self, 
         user_id: str, 
@@ -66,23 +117,27 @@ class VectorMemory:
         Retrieve relevant past messages for a user
         Returns list of {message, role, timestamp} dicts
         """
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=top_k,
-            where={"user_id": user_id}  # Filter by user for privacy
-        )
-        
-        # Format results
-        context = []
-        if results['documents'] and len(results['documents'][0]) > 0:
-            for i, doc in enumerate(results['documents'][0]):
-                context.append({
-                    "message": doc,
-                    "role": results['metadatas'][0][i]['role'],
-                    "timestamp": results['metadatas'][0][i]['timestamp']
-                })
-        
-        return context
+        try:
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k,
+                where={"user_id": user_id}  # Filter by user for privacy
+            )
+            
+            # Format results
+            context = []
+            if results['documents'] and len(results['documents'][0]) > 0:
+                for i, doc in enumerate(results['documents'][0]):
+                    context.append({
+                        "message": doc,
+                        "role": results['metadatas'][0][i]['role'],
+                        "timestamp": results['metadatas'][0][i]['timestamp']
+                    })
+            
+            return context
+        except Exception as e:
+            print(f"Search Vector Context Error: {e}")
+            return []
 
 # Singleton instance
 vector_memory = VectorMemory()

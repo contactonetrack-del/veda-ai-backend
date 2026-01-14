@@ -1,0 +1,22 @@
+{
+  "name": "VEDA AI",
+  "version": "1.0.0",
+  "mcp_servers": {
+    "jira": {
+      "command": "python",
+      "args": ["../jira-mcp-server/jira_mcp_server.py"],
+      "env": {
+        "JIRA_HOST": "https://onetrack.atlassian.net",
+        "JIRA_USER_EMAIL": "${JIRA_USER_EMAIL}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+        "JIRA_PROJECT_KEY": "${JIRA_PROJECT_KEY}"
+      }
+    }
+  },
+  "capabilities": {
+    "check_project_status": "Get current sprint progress",
+    "list_tasks": "List all development tasks",
+    "create_bug_report": "Auto-create bug reports on test failures",
+    "update_task_status": "Update task status in Jira"
+  }
+}

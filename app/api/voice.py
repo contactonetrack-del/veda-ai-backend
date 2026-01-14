@@ -224,3 +224,51 @@ async def get_supported_languages():
         "default": "hi",
         "note": "Bhojpuri uses Hindi TTS as fallback"
     }
+@router.post("/synthesize")
+async def synthesize_text(
+    text: str,
+    language: str = "hi",
+    description: str = None
+):
+    """
+    Generate speech from text (REST endpoint).
+    Returns audio/wav file.
+    """
+    try:
+        tts = get_tts_service()
+        
+        # Determine TTS language code
+        language_map = {
+            "hindi": "hi", "hi": "hi",
+            "english": "en", "en": "en",
+            # Add other mappings as needed or rely on direct codes
+        }
+        # Use provided code if not in map (allows direct 'hi', 'bn', etc.)
+        tts_lang = language_map.get(language.lower(), language)
+        
+        # Generate to temp file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp_path = tmp.name
+            
+        success = tts.synthesize(text, tts_lang, tmp_path)
+        
+        if not success:
+            return {"error": "TTS synthesis failed"}
+            
+        # Return as streaming response (better for large files)
+        # Note: In production, consider background tasks + explicit cleanup
+        
+        def iterfile():
+            try:
+                with open(tmp_path, mode="rb") as file_like:
+                    yield from file_like
+            finally:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(iterfile(), media_type="audio/wav")
+        
+    except Exception as e:
+        logger.error(f"Synthesize error: {e}")
+        return {"error": str(e)}

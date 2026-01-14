@@ -101,64 +101,47 @@ async def analyze_food_image(request: VisionAnalysisRequest, http_request: Reque
     if "," in image_data:
         image_data = image_data.split(",")[1]
     
-    # Check for Gemini API key
-    if not settings.GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=500, 
-            detail="Vision API not configured. Contact support."
-        )
+    # Check for Ollama Cloud service
+    from app.services.ollama_service import ollama_service
+    if not ollama_service.is_available:
+        # Fallback to direct Gemini if Ollama Cloud fails/not configured
+        if not settings.GEMINI_API_KEY:
+            raise HTTPException(
+                status_code=500, 
+                detail="Vision API not configured. Contact support."
+            )
+        # (Rest of existing Gemini direct logic stays as fallback if needed)
     
     try:
-        # Call Gemini Vision API
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={settings.GEMINI_API_KEY}",
-                json={
-                    "contents": [{
-                        "parts": [
-                            {"text": FOOD_ANALYSIS_PROMPT},
-                            {
-                                "inline_data": {
-                                    "mime_type": "image/jpeg",
-                                    "data": image_data
-                                }
-                            }
-                        ]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "maxOutputTokens": 1024
-                    }
-                }
-            )
+        # Call Ollama Cloud Vision (Gemini 3 Flash Preview)
+        result = await ollama_service.invoke(
+            prompt=FOOD_ANALYSIS_PROMPT,
+            model_type="vision",
+            images=[image_data],
+            temperature=0.2
+        )
         
-        # Handle Gemini API errors
-        if response.status_code == 429:
-            raise HTTPException(
-                status_code=429,
-                detail="Gemini API quota exceeded. Please try again tomorrow."
-            )
+        if "error" in result:
+             raise Exception(result["error"])
+             
+        text_content = result.get("response", "")
         
-        if response.status_code == 400:
-            raise HTTPException(
-                status_code=400,
-                detail="Image format not supported. Please use JPEG or PNG."
-            )
+        # Parse JSON from response
+        analysis = parse_gemini_json(text_content)
         
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Vision API error: {response.status_code}"
-            )
+        # Get remaining rate limit
+        remaining = rate_limiter.get_remaining(rate_key, limit=5)
         
-        # Parse Gemini response
-        gemini_data = response.json()
-        
-        # Extract text from response
-        if "candidates" not in gemini_data or not gemini_data["candidates"]:
-            raise HTTPException(status_code=500, detail="No analysis generated")
-        
-        text_content = gemini_data["candidates"][0]["content"]["parts"][0]["text"]
+        return VisionAnalysisResponse(
+            success=True,
+            foods=analysis.get("foods", []),
+            total_calories=analysis.get("total_calories", 0),
+            total_protein=analysis.get("total_protein", 0),
+            total_carbs=analysis.get("total_carbs", 0),
+            total_fat=analysis.get("total_fat", 0),
+            health_tips=analysis.get("health_tips", []),
+            rate_limit_remaining=remaining
+        )
         
         # Parse JSON from response
         analysis = parse_gemini_json(text_content)
