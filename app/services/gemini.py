@@ -62,4 +62,44 @@ class GeminiService:
             except Exception as e:
                 return f"Error calling Gemini: {str(e)}"
 
+    async def analyze_multimodal(self, prompt: str, data: bytes, mime_type: str = "image/jpeg") -> str:
+        """Analyze multimodal content (image/video) inline"""
+        if not self.api_key:
+            return "Error: Gemini API Key not configured"
+
+        # Encode bytes to base64
+        import base64
+        b64_data = base64.b64encode(data).decode('utf-8')
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/gemini-1.5-flash:generateContent?key={self.api_key}",
+                    json={
+                        "contents": [{
+                            "parts": [
+                                {"text": prompt},
+                                {
+                                    "inline_data": {
+                                        "mime_type": mime_type,
+                                        "data": b64_data
+                                    }
+                                }
+                            ]
+                        }]
+                    }
+                )
+                
+                if response.status_code != 200:
+                    return f"Error: Gemini API {response.status_code} - {response.text}"
+                    
+                data = response.json()
+                if "candidates" in data and data["candidates"]:
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                else:
+                    return "Error: No response from Gemini"
+                    
+        except Exception as e:
+            return f"Error analyzing media: {str(e)}"
+
 gemini_service = GeminiService()

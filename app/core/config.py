@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Supabase
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
     
     # AI Models
     GEMINI_API_KEY: str = ""
@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     JIRA_USER_EMAIL: str = ""
     JIRA_API_TOKEN: str = ""
     JIRA_PROJECT_KEY: str = "DEV"
+    
+    # Slack Integration
+    SLACK_BOT_TOKEN: str = ""
     
     class Config:
         env_file = ".env"

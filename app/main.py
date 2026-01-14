@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
-from app.api import auth, chat, transcribe, vision, orchestrator, local_llm, reasoning, experts, browser, knowledge, voice, memory
+from app.api import auth, chat, transcribe, vision, orchestrator, local_llm, reasoning, experts, browser, knowledge, voice, memory, jira
 
 settings = get_settings()
 
@@ -39,6 +39,9 @@ app.include_router(memory.router, prefix=f"{settings.API_V1_STR}/memory", tags=[
 
 # Phase 7: Voice Integration
 app.include_router(voice.router)
+
+# Phase 8: Enterprise Integration
+app.include_router(jira.router, prefix=f"{settings.API_V1_STR}/jira", tags=["jira"])
 
 
 

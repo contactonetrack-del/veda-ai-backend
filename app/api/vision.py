@@ -3,7 +3,7 @@ Vision API endpoint - Secure proxy for Gemini Vision API.
 Protects API key from frontend exposure with rate limiting.
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, File, UploadFile
 from pydantic import BaseModel, Field
 import httpx
 import json
@@ -226,3 +226,43 @@ async def get_rate_limit_status(http_request: Request):
         "window_hours": 1,
         "message": f"You can analyze {remaining} more images this hour."
     }
+
+
+@router.post("/analyze-video")
+async def analyze_video(file: UploadFile = File(...), http_request: Request = None):
+    """
+    Analyze short video clips for wellness/activity/food using Gemini.
+    Max size: 10MB (Short clips only)
+    """
+    from app.services.gemini import gemini_service
+    
+    # helper for rate limit (share with vision)
+    client_ip = http_request.client.host if (http_request and http_request.client) else "unknown"
+    rate_key = f"vision:{client_ip}"
+    
+    if not rate_limiter.allow(rate_key, limit=5, window_seconds=3600):
+        remaining = rate_limiter.get_remaining(rate_key, limit=5)
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
+    # Check mime type
+    if not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a video.")
+        
+    # Read file (check size manually by reading chunks or just read all if small)
+    # Warning: reading all into memory. 10MB Limit enforced.
+    contents = await file.read()
+    
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Video too large. Max 10MB allowed.")
+        
+    prompt = """Analyze this video. Identify:
+1. Main activity or subject (Yoga, Workout, Cooking, Recipe)
+2. If food: Estimated calories and ingredients.
+3. If exercise: Form check and estimated burn.
+4. Summary of what is happening.
+
+Format as JSON: { "activity": "...", "details": "...", "calories_or_burn": "..." }"""
+
+    result = await gemini_service.analyze_multimodal(prompt, contents, file.content_type)
+    
+    return {"analysis": result}

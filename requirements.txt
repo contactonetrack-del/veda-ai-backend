@@ -11,6 +11,8 @@ google-genai
 chromadb
 groq
 ollama
+jira
+slack_sdk
 # Phase 1: Perplexity-class Intelligence
 langgraph>=0.2.0
 langchain>=0.3.0

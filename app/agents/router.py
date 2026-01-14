@@ -22,7 +22,15 @@ Your job is to classify user messages into ONE of these categories:
 - "search": Queries requiring REAL-TIME information (news, updates)
 - "research": Requests for DEEP analysis, reports, investigations, or complex topics requiring synthesis
 - "analysis": Requests requiring math, statistics, data processing, or pattern finding
+- "work": Enterprise tasks - Jira tickets, Sprint status, Slack messages, Work updates
 - "general": Greetings, about VEDA, unclear queries, casual conversation
+
+IMPORTANT: Use "work" for:
+- "Create a Jira ticket for..."
+- "Add a bug report..."
+- "Check sprint status"
+- "Update the team on Slack"
+- "What are my tasks?"
 
 IMPORTANT: Use "analysis" for:
 - "Analyze this data..."
@@ -69,7 +77,7 @@ Examples:
         intent = classification.strip().lower()
         
         # Validate classification
-        valid_intents = ["wellness", "protection", "tool", "search", "general", "research", "analysis"]
+        valid_intents = ["wellness", "protection", "tool", "search", "general", "research", "analysis", "work"]
         if intent not in valid_intents:
             # Default to general if unclear
             intent = "general"
@@ -89,6 +97,7 @@ Examples:
             "search": "SearchAgent",
             "research": "DeepResearchAgent",
             "analysis": "DataAnalystAgent",
+            "work": "WorkAgent",
             "general": "GeneralAgent"
         }
         return mapping.get(intent, "GeneralAgent")

@@ -17,7 +17,9 @@ from app.agents.fact_checker import fact_checker
 from app.agents.deep_research import deep_research_agent
 from app.agents.data_analyst import data_analyst_agent
 from app.agents.cross_verifier import cross_verifier_agent
+from app.agents.cross_verifier import cross_verifier_agent
 from app.agents.study import study_agent  # Phase 5: Study Mode
+from app.agents.work import work_agent  # Phase 8: Enterprise
 from app.services.memory import vector_memory
 from app.services.history import history_service
 from app.services.embeddings import generate_embedding
@@ -38,7 +40,9 @@ class Orchestrator:
             "SearchAgent": search_agent,
             "DeepResearchAgent": deep_research_agent,
             "DataAnalystAgent": data_analyst_agent,
-            "StudyAgent": study_agent  # Phase 5: Study Mode
+            "DataAnalystAgent": data_analyst_agent,
+            "StudyAgent": study_agent,  # Phase 5: Study Mode
+            "WorkAgent": work_agent  # Phase 8: Enterprise
         }
     
     async def process_message(
@@ -117,6 +121,12 @@ class Orchestrator:
                     agent_name = "SearchAgent" 
                  else:
                      intent = None
+
+            # Fast Path 4: Work/Jira
+            elif any(x in msg_lower for x in ["jira", "ticket", "sprint", "bug report", "slack"]):
+                print(f"[Orchestrator] Fast-tracking to WorkAgent: {msg_lower[:30]}...")
+                intent = "work"
+                agent_name = "WorkAgent"
             
             else:
                 intent = None

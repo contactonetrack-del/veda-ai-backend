@@ -224,5 +224,17 @@
       "content": "However, I need a bit more context or information from you. What would you like a helpful and accurate response about? Wellness, health, nutrition, fitness, or something else? Let me know, and I'll do my best to assist you.",
       "timestamp": "2026-01-12T03:22:03.422539"
     }
+  ],
+  "test_user": [
+    {
+      "role": "user",
+      "content": "Create a Jira bug for 'Login button broken' with description 'User gets 500 error'",
+      "timestamp": "2026-01-15T03:18:39.182078"
+    },
+    {
+      "role": "assistant",
+      "content": "\"Failed to create your Jira ticket due to an invalid issue type configuration. Let's fix this:  \n\n1. Please confirm your project has a 'Bug' issue type available  \n2. Try this format for creating bugs:  \n```json\n{\n  \"fields\": {\n    \"project\": {\"key\": \"YOUR-PROJECT-KEY\"},\n    \"summary\": \"Login button broken\",\n    \"description\": \"User gets 500 error when clicking login\",\n    \"issuetype\": {\"name\": \"Bug\"}\n  }\n}\n```  \nNeed help checking your project's available issue types? I can guide you through that.\"\n\nACTION: CREATE_TASK | Add Jira issue type validation | Implement pre-check for valid issue types before API submission to prevent 400 errors",
+      "timestamp": "2026-01-15T03:19:01.766500"
+    }
   ]
 }
