@@ -13,6 +13,7 @@ groq
 ollama
 jira
 slack_sdk
+openai>=1.0.0
 # Phase 1: Perplexity-class Intelligence
 langgraph>=0.2.0
 langchain>=0.3.0
