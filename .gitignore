@@ -10,3 +10,16 @@ ENV/
 .vscode/
 .idea/
 *.log
+
+# Local development state
+chat_history.json
+.quota_usage.json
+chroma_db/
+
+# Audio samples
+*.wav
+*.mp3
+
+# Temp files
+*.tmp
+*.bak
