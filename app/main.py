@@ -14,9 +14,14 @@ app = FastAPI(
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Next.js dev server
+        "https://veda-ai.vercel.app",  # Production Web
+        "https://veda-ai-backend-ql2b.onrender.com",  # Backend self-reference
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -42,6 +47,10 @@ app.include_router(voice.router)
 
 # Phase 8: Enterprise Integration
 app.include_router(jira.router, prefix=f"{settings.API_V1_STR}/jira", tags=["jira"])
+
+# Phase 9: Workout Tracking
+from app.api import workouts
+app.include_router(workouts.router, prefix=f"{settings.API_V1_STR}/workouts", tags=["workouts"])
 
 
 

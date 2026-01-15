@@ -299,38 +299,6 @@ class ModelRouter:
                  "error": str(e_final),
                  "fallback": True
             }
-        
-        except Exception as e:
-            print(f"Primary provider {provider} failed: {e}")
-            
-            # Simple Fallback Chain: OpenAI -> Gemini -> Groq
-            # (If primary was OpenAI, fallback to Gemini)
-            if provider == "openai":
-                fallback_provider = "gemini"
-            elif provider == "gemini":
-                fallback_provider = "groq"
-            else:
-                fallback_provider = "gemini"
-            
-            # ... (Reuse existing fallback logic or simplify)
-            # For brevity, implementing direct fallback call logic here would be repetitive.
-            # I will just call Gemini as universal fallback to ensure reliability.
-            
-            try:
-                full_prompt = f"{system_prompt}\n\n{message}" if system_prompt else message
-                response = await gemini_service.generate_response(full_prompt, history=history)
-                return {
-                    "response": response,
-                    "provider": "gemini",
-                    "model": "gemini-fallback",
-                    "fallback": True
-                }
-            except Exception as e2:
-                return {
-                     "response": "Service Unavailable. Please check your connection.",
-                     "error": str(e2),
-                     "fallback": True
-                }
 
 # Singleton instance
 model_router = ModelRouter()

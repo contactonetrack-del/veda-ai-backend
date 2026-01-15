@@ -17,7 +17,6 @@ from app.agents.fact_checker import fact_checker
 from app.agents.deep_research import deep_research_agent
 from app.agents.data_analyst import data_analyst_agent
 from app.agents.cross_verifier import cross_verifier_agent
-from app.agents.cross_verifier import cross_verifier_agent
 from app.agents.study import study_agent  # Phase 5: Study Mode
 from app.agents.work import work_agent  # Phase 8: Enterprise
 from app.services.memory import vector_memory
