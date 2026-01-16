@@ -18,7 +18,8 @@ app.add_middleware(
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Next.js dev server
         "https://veda-ai.vercel.app",  # Production Web
-        "https://veda-ai-backend-ql2b.onrender.com",  # Backend self-reference
+        "https://veda-ai-website.onrender.com",  # Production Website (Render)
+        "https://veda-ai-backend-q12b.onrender.com",  # Backend self-reference
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
