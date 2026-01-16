@@ -42,7 +42,7 @@ class GeminiService:
                 # Use Gemini 1.5 Flash via REST API
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     response = await client.post(
-                        f"{self.base_url}/gemini-1.5-flash:generateContent?key={self.api_key}",
+                        f"{self.base_url}/gemini-1.5-flash-latest:generateContent?key={self.api_key}",
                         json={
                             "contents": [{
                                 "parts": [{"text": full_prompt}]
@@ -74,7 +74,7 @@ class GeminiService:
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    f"{self.base_url}/gemini-1.5-flash:generateContent?key={self.api_key}",
+                    f"{self.base_url}/gemini-1.5-flash-latest:generateContent?key={self.api_key}",
                     json={
                         "contents": [{
                             "parts": [
