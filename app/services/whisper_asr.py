@@ -1,12 +1,15 @@
 import os
 import logging
+from typing import Tuple, List, Dict, Any
+
+# Check if faster-whisper is available
 try:
     from faster_whisper import WhisperModel
     HAS_WHISPER = True
 except ImportError:
     HAS_WHISPER = False
     WhisperModel = None
-from typing import Tuple, List, Dict, Any
+    logging.warning("faster-whisper not installed. ASR features will be disabled.")
 
 # Model size from env (tiny=fastest, base=balanced, small=better accuracy)
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "tiny")  # Changed to tiny for speed
@@ -18,9 +21,17 @@ class WhisperASRService:
         self.device = device
         self.compute_type = compute_type
         self.model = None
-        self._load_model()
+        self.is_available = HAS_WHISPER
+        
+        # Only load model if faster-whisper is available
+        if self.is_available:
+            self._load_model()
 
     def _load_model(self):
+        if not HAS_WHISPER or WhisperModel is None:
+            self.logger.warning("Whisper not available - skipping model load")
+            return
+            
         try:
             self.logger.info(f"Loading Whisper model: {self.model_size} (device={self.device}, compute_type={self.compute_type})")
             self.model = WhisperModel(
@@ -31,15 +42,15 @@ class WhisperASRService:
             self.logger.info("Whisper model loaded successfully")
         except Exception as e:
             self.logger.error(f"Failed to load Whisper model: {e}")
-            raise
+            self.is_available = False
 
     def transcribe(self, audio_path: str, language: str = None) -> Dict[str, Any]:
         """
         Transcribe audio file to text.
         Returns a dict with transcript, detected_language, and confidence.
         """
-        if not self.model:
-            raise RuntimeError("Whisper model not loaded")
+        if not self.is_available or not self.model:
+            return {"error": "Whisper ASR not available. faster-whisper is not installed."}
 
         try:
             self.logger.info(f"Transcribing: {audio_path}")
@@ -65,5 +76,5 @@ class WhisperASRService:
             self.logger.error(f"Transcription failed: {e}")
             return {"error": str(e)}
 
-# Singleton instance
+# Singleton instance - safe to create even without faster-whisper
 asr_service = WhisperASRService()
