@@ -5,7 +5,7 @@ Zero-cost using Playwright (FREE)
 """
 import asyncio
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime
 
 # Check if playwright is available
@@ -14,6 +14,9 @@ try:
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
+    # Define placeholder types for type hints when playwright is not installed
+    Browser = Any  # type: ignore
+    Page = Any  # type: ignore
     logging.warning("Playwright not installed. Run: pip install playwright && playwright install")
 
 
